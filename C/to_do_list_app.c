@@ -14,9 +14,11 @@
  int process_file(char *, char *, char *, char *);
  int init();
  char* enc_dec(char *, char *);
+ char *win_directory(char *);
+ char *get_input();
  bool is_command(char*);
  void free_node();
- void _free(struct Node **);
+ void n_free(struct Node **);
  void shift_node(struct Node **, char *);
 
 		
@@ -29,7 +31,28 @@ struct Node {
 };
 
 struct Node *head;
-const char *filename;
+char *filename;
+
+/**
+ * main function.
+ */
+ int main(int argc, char *argv[]) {
+	 
+	 char *task = NULL, *date = NULL, *comment = NULL;
+	 int ret;
+	 
+	 
+     filename = win_directory(argv[0]);
+	 if ((ret = init()) < 0)
+		 return (ret);
+	 ret = 0;
+	 while (ret != -1) {
+		 ret = process_normal();
+		 printf("val of ret in main = %d\n", ret);
+	 }
+	 free(filename);
+	 return(0);
+ }
 
 /**
  * init - iniializes basic functions of the program
@@ -41,6 +64,7 @@ int init() {
 	
 	if ((fd = fopen(filename, "r")) == NULL)
 		return(0);
+	
 	struct Node n = {NULL, NULL, NULL, NULL, NULL};
 	head = (struct Node *)malloc(sizeof(struct Node));
 	if (head == NULL) {
@@ -52,10 +76,11 @@ int init() {
 	head = &n;
 	// check if the file is empty before proceeding
 	fseek(fd, 0, SEEK_END);
-	if (ftell(fd) <= 0)
+	if (ftell(fd) <= 0) {
+		fclose(fd);
 		return (0);
+	}
 	fseek(fd, 0, SEEK_SET);
-	
 	p = (char *)malloc(1024 * sizeof(char));
 	if (p == NULL) {
 		perror("Error - unable to allocate required memory\n");
@@ -120,7 +145,7 @@ int init() {
   * process_normal- run as a normal file, i.e, when args are not passed from cmd
   */
  int process_normal() {
-	 char *usr = NULL, *command, *task = NULL, *date = NULL, *comment = NULL;
+	 char *usr = NULL, *command = NULL, *task = NULL, *date = NULL, *comment = NULL;
 	 int ret, count = 0, i = 0, j = 0;
 	 ssize_t nread;
 	 size_t len = 0;
@@ -131,41 +156,9 @@ int init() {
 		 perror("Error - unable to allocate required memory\n");
 		 return(-1);
 	 }
-	 /**
-	 
-	 command = (char *)malloc(10 * sizeof(char));
-	 if (command == NULL) {
-		 perror("Error - unable to allocate required memory\n");
-		 free(usr);
-		 return(-1);
-	 }
-	 task = (char *)malloc(300 * sizeof(char));
-	 if (task == NULL) {
-		 perror("Error - unable to allocate required memory\n");
-		 free(usr);
-		 free(command);
-		 return(-1);
-	 }
-	 date = (char *)malloc(20 * sizeof(char));
-	 if (date == NULL) {
-		 perror("Error - unable to allocate required memory\n");
-		 free(usr);
-		 free(command);
-		 free(task);
-		 return(-1);
-	 }
-	 comment = (char *)malloc(1024 * sizeof(char));
-	 if (date == NULL) {
-		 perror("Error - unable to allocate required memory\n");
-		 free(usr);
-		 free(command);
-		 free(task);
-		 free(date);
-		 return(-1);
-	 }
-	 */
+	 printf("What would you like to do\n1. add task\n2. edit task\n3. delete task\n4.view saved tasks\n5.exit\n");
 	 while (scanf("%s", usr)) {
-		 if (strcmpi(usr, "exit") == 0) {
+		 if (strcmpi(usr, "5") == 0) {
 			 free(usr);
 			 return(-1);
 		 }
@@ -179,31 +172,54 @@ int init() {
 			 break;
 		 printf("invalid command\n");
 	 }
+	 command = (char *)malloc(10 * sizeof(char));
+	 if (command == NULL) {
+		 perror("Error - unable to allocate required memory\n");
+		 free(usr);
+		 return (-1);
+	 }
 	 if (strcmp(usr,"1") == 0) {
-		 command = "add";
+		 strcpy(command, "add");
 		 printf("Task: ");
-		 nread = getline(&task, &len, stdin);
-		 task[nread - 1] = '\0';
-		 len = 0;
+		 task = get_input();
+		 if (task == NULL) {
+			 perror("Error - failed to get user input\n");
+			 free(command);
+			 return (-1);
+		 }
 		 printf("date: ");
-		 nread = getline(&date, &len, stdin);
-		 date[nread - 1] = '\0';
-		 len = 0;
+		 date = get_input();
+		 if (date == NULL) {
+			 perror("Error - failed to get user input\n");
+			 free(task);
+			 free(command);
+			 return (-1);
+		 }
 		 printf("comment: ");
-		 nread = getline(&comment, &len, stdin);
-		 comment[nread - 1] = '\0';
+		 comment = get_input();
+		 if (comment == NULL) {
+			 perror("Error - failed to get user input\n");
+			 free(date);
+			 free(task);
+			 free(command);
+			 return (-1);
+		 }
 	 }
 	 else if (strcmp(usr,"2") == 0 || strcmp(usr,"3") == 0) {
 		 if (strcmp(usr,"2") == 0)
-			 command = "edit";
+			 strcpy(command, "edit");
 		 else
-			 command = "delete";
+			strcpy(command, "delete");
 		 printf("task to %s: ", command);
-		 nread = getline(&task, &len, stdin);
-		 task[nread - 1] = '\0';
+		 task = get_input();
+		 if (task == NULL) {
+			 free(command);
+			 perror("Error - failed to get user input\n");
+			 return (-1);
+		 }
 	 }
 	 else {
-		 command = "print";
+		 strcpy(command, "print");
 	 }
 	 ret = process_file(command, task, date, comment);
 	 free(usr);
@@ -222,18 +238,27 @@ int init() {
 	 int num = 0;
 	 char *sep = ";", *val;
 	 
-	 if ((fd = fopen(filename, "r")) == NULL)
+	 printf("in process file vals =\n%s\n%s\n%s\n%s\n", command, task, date, comment);
+	 if ((fd = fopen(filename, "r")) == NULL) {
 		 fd = fopen(filename, "w");
+		 if (fd == NULL) {
+			 printf("failed to create file. Try again.\n");
+			 return (0);
+		 }
+	 }
+	 printf("opened file for reading then close\n");
 	 fclose(fd);
 	 if (strcmp(command, "print") == 0) {
-		 if (head->task == NULL) {
+		 if (head == NULL) {
 			 printf("No task to show.\n");
 			 return(0);
 		 }
 		 printf("task\t\tdate\t\tcomment\t\t\n");
-		 while (head != NULL) {
+		 while (1) {
 			 printf("%d  ", num++);
 			 printf("%s\t%s\t%s\n", head->task, head->date, head->comment);
+			 if (head->next == NULL)
+				 break;
 			 head = head->next;
 		 }
 		 shift_node(&head, "up");
@@ -255,10 +280,12 @@ int init() {
 		 shift_node(&head, "up");
 		 fd = fopen(filename, "a");
 		 if (fd == NULL) {
+			 printf("unable to open file for appending");
 			 perror("error - unable to open file for writting. please try again.\n");
-			 _free(&new);
+			 n_free(&new);
 			 return (0);
 		 }
+		 printf("opened file for appending");
 		 if (ftell(fd) > 0)
 			 fwrite(sep, 1, sizeof(sep), fd);
 		 val = enc_dec("enc", new->task);
@@ -301,6 +328,7 @@ int init() {
 			 head = ptr->next;
 		 }
 		 shift_node(&head, "up");
+		 process_file("other",NULL, NULL, NULL);
 		 return (0);
 	 }
 	 else if (strcmp(command, "delete") == 0) {
@@ -317,7 +345,7 @@ int init() {
 				 head = ptr->next;
 				 head->prev = ptr->prev;
 				 ptr->prev->next = head;
-				 _free(&ptr);
+				 n_free(&ptr);
 				 process_file("rewrite", NULL, NULL, NULL);
 				 break;
 			 }
@@ -325,6 +353,9 @@ int init() {
 				 printf("Task not found\n");
 				 break;
 			 }
+			 head = head->next;
+			 process_file("other",NULL, NULL, NULL);
+			 return (0);
 		 }
 	 }
 	 else {
@@ -415,6 +446,8 @@ int init() {
 	 struct Node *ptr, *hptr;
 	 
 	 hptr = *hpsn;
+	 if (*hpsn == NULL)
+		 return;
 	 if (strcmp(psn, "up") == 0) {
 		 while (hptr->prev != NULL) {
 			 ptr = hptr;
@@ -431,6 +464,64 @@ int init() {
 	 }
  }
  
+ /**
+ * win_directory - used to create a full directory path of the .txt file
+ */
+ char *win_directory(char *directory) {
+	int i, val, len;
+	char *f;
+	
+	len = strlen(directory) + 15;
+	f = (char *)malloc(len * sizeof(char));
+	if (f == NULL) {
+		perror("Error - unable to allocate required memory\n");
+		return (NULL);
+	}
+	i = 0;
+	while(1) {
+		if (directory[i] == '\0') break;
+		if (directory[i] == 92) val = i;
+		i++;
+	}
+	directory[val] = '\0';
+	strcpy(f, directory);
+	
+	return (strcat(f, "\\to_do_list.txt"));
+ }
+ 
+ /**
+  * get_input - reads user input from stdin and returns it as a string
+  */
+ char *get_input() {
+	 int c, i = 0;
+	 size_t max_val = 1024;
+	 char *str;
+	 
+	 str = (char *)malloc(max_val * sizeof(char));
+	 if (str == NULL) {
+		 perror("Error - malloc failed\n");
+		 return (NULL);
+	 }
+	 while (1) {
+		 c = getchar();
+		 if (c == '\n') {
+			 str[i] = '\0';
+			 break;
+		 }
+		 if (i == max_val - 1) {
+			 max_val = max_val + 1024;
+			 realloc(str, max_val);
+			 if (str == NULL) {
+				 perror("Error - realloc fail\n");
+				 free(str);
+				 return (NULL);
+			 }
+		 }
+		 str[i] = c;
+		 i++;
+	 }
+	 return (str);
+ }
  
  /**
   free_node - used to free struct Node memory on exit
@@ -442,48 +533,20 @@ int init() {
 	while(head != NULL) {
 		ptr = head;
 		head = ptr->next;
-		_free(&ptr);
+		n_free(&ptr);
 	}
  }
  
  /**
-  * _free - used to  free  a siglr node.
+  * n_free - used to  free  a siglr node.
   */
- void _free(struct Node **p) {
-	 struct Node *ptr;
-	 ptr = *p;
-	 free(ptr->task);
-	 free(ptr->date);
-	 free(ptr->comment);
-	 free(ptr);
- }
- 
-/**
- * main function.
- */
- int main(int argc, char *argv[]) {
-	 
-	 char *task = NULL, *date = NULL, *comment = NULL;
-	 int ret;
-	 
-	 TCHAR szPath[MAX_PATH];
-     if (SUCCEEDED(SHGetFolderPath(NULL, CSIDL_PERSONAL, NULL, 0, szPath))) {
-        strcat(szPath, "\\to_do_list\\example.txt");
-	 }
-	 else {
-		 printf("Error getting Documents folder path.\n");
-		 return (0);
-	 }
-	 
-	 filename = szPath;
-	 printf("filename = %s]\n", filename);
-	 return(0);
-	 if ((ret = init()) < 0)
-		 return (ret);
-	 ret = 0;
-	 while (ret != -1) {
-		 printf("What would you like to do\n1. add task\n2. edit task\n3. delete task\n4.view saved tasks\n5.exit\n");
-		 ret = process_normal();
-	 }
-	 return(0);
- }
+ void n_free(struct Node **p) {
+    if (*p == NULL) return;
+
+    struct Node *ptr = *p;
+    if (ptr->task!= NULL) free(ptr->task);
+    if (ptr->date!= NULL) free(ptr->date);
+    if (ptr->comment!= NULL) free(ptr->comment);
+    free(ptr);
+    *p = NULL; // set the original pointer to NULL to avoid dangling pointers
+}
