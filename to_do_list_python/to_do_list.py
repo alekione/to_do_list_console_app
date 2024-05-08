@@ -1,6 +1,10 @@
 import os
 from pathlib import Path
+
+# Dictionary to store tasks
 task_dict = dict()
+
+# Define the file paths for the task list and its backup
 filename = Path.home()
 b_filename = Path.home()
 if os.name == "nt":
@@ -12,7 +16,12 @@ else:
 	
 
 def process_file():
+	"""
+    Process the task list file, loading tasks into task_dict.
+    If file doesn't exist, create it.
+    """
 	try:
+		#read saved tasks from file
 		with open(filename, 'r') as fd:
 			rd = fd.readline()
 			if rd == "":
@@ -25,9 +34,10 @@ def process_file():
 					task_dict[enc_dec("dec", vals[i])] = enc_dec("dec", vals[i + 1])
 				i += 1
 			
-			check_backup()
+			check_backup() #check if the backup file has any tasks saved in it
 	except FileNotFoundError:
 		try:
+			#if the file doesn't exist, create it
 			with open(filename, "w") as fd:
 				pass
 		except FileNotFoundError:
@@ -40,6 +50,9 @@ def process_file():
 			
 
 def get_input():
+	"""
+		get user input and process it
+	"""
 	while True:
 		usr = input("> ")
 		if usr not in ['add', 'edit', 'delete', "print", "exit"]:
@@ -58,6 +71,9 @@ def get_input():
 		on_exit()
 
 def add_task():
+	"""
+		add a new task
+	"""
 	while True:
 		task = input("Task: ")
 		if task == "":
@@ -77,6 +93,9 @@ def add_task():
 		fd.write('\n')
 
 def edit_task():
+	"""
+		edit saved task/s
+	"""
 	while True:
 		task = input("Task: ")
 		if task == "":
@@ -89,10 +108,10 @@ def edit_task():
 		print("'"+ task + "'", "task not found.")
 		return
 	date = input("Date: ")
-	if date == "":
+	if date == "":  #do not change anything
 		date = task_dict[task].split(",", maxsplit=1)[0]
 	comment = input("comment: ")
-	if comment == "":
+	if comment == "":  #do not change anything
 		comment = task_dict[task].split(",", maxsplit=1)[1]
 	task_dict[task] = date + ',' + comment
 	with open(b_filename, 'a') as fd:
@@ -104,6 +123,9 @@ def edit_task():
 		
 
 def delete_task():
+	"""
+		remove task
+	"""
 	while True:
 		task = input("Task: ")
 		if task == "":
@@ -128,6 +150,9 @@ def delete_task():
 			fd.write("\n")
 
 def print_task():
+	"""
+		display saved tasks
+	"""
 	if len(task_dict) == 0:
 		print("No task to print")
 		return
@@ -141,6 +166,9 @@ def print_task():
 		print(counter, key, "\t", date, "\t", comment)
 
 def enc_dec(command, str_val):
+	"""
+		encode and decode for/from file
+	"""
 	n_code = "abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ.,)/?'(&"
 	val = 12
 	length = len(n_code)
@@ -163,6 +191,9 @@ def enc_dec(command, str_val):
 	return(ret_val)
 
 def check_backup():
+	"""
+		check if there is any changes saved in the backup file and update it
+	"""
 	try:
 		with open(b_filename, 'r') as bfd:
 			while True:
@@ -194,6 +225,7 @@ def check_backup():
 					exit(1)
 	except FileNotFoundError:
 		try:
+			#create new fi;e if it doesn't exist
 			with open(b_filename, 'w') as bfd:
 				pass
 		except FileNotFoundError:
@@ -205,10 +237,14 @@ def check_backup():
 	except PermissionError:
 		print("backup file permission denied.")
 		exit(1)
+	#empty backup file after updating
 	with open(b_filename, 'w') as fd:
 		pass
 
 def on_exit():
+	"""
+		runs only when tthe program is terminated. saves changes into the file.
+	"""
 	with open(filename, 'w') as fd:
 		for key, val in task_dict:
 			fd.write(enc_dec("enc", task))
